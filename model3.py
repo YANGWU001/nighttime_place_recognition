@@ -4,6 +4,7 @@ import os
 from matplotlib import pyplot as plt
 from alive_progress import alive_bar
 import time
+import random
 lookUpTable = np.empty((1,256), np.uint8)
 for i in range(256):
     lookUpTable[0,i] = np.clip(pow(i / 255.0, 0.6) * 255.0, 0, 255)
@@ -58,6 +59,8 @@ def getimages(path):
     images = os.listdir(path)
     images = [i for i in images if "DS" not in images]
     pairs = [(a, b) for idx, a in enumerate(images) for b in images[idx + 1:]]
+    if len(pairs) >= 1000:
+        pairs = random.sample(pairs, 1000)
     return pairs
 overall_threshold = []
 for i in training:
@@ -79,6 +82,8 @@ def gettest(path):
     images = os.listdir(path)
     images = [i for i in images if "DS" not in images]
     pairs = [(a, b) for idx, a in enumerate(images) for b in images[idx + 1:]]
+    if len(pairs)>=1000:
+        pairs = random.sample(pairs, 1000)
     return pairs
 testing = os.listdir("./test")
 testing = [i for i in testing if "DS" not in i]
@@ -98,11 +103,11 @@ for i in testing:
 accuracy = yes/(yes+no)
 print(accuracy)
 overall_threshold2 = [sum(i)/len(i) for i in overall_threshold]
-textfile = open("result.txt", "w")
+textfile = open("result1000.txt", "w")
 for i in overall_threshold2:
     textfile.write(str(i) + "\n")
 textfile.write("threshold" + "\n")
 textfile.write(str(th) + "\n")
 textfile.write("accuracy" + "\n")
-textfile.write(str(accuracy) + "\n")
+textfile.write(str(accuracy)+ "\n")
 textfile.close()

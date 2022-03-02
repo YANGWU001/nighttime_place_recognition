@@ -4,6 +4,7 @@ import os
 from matplotlib import pyplot as plt
 from alive_progress import alive_bar
 import time
+import random
 lookUpTable = np.empty((1,256), np.uint8)
 for i in range(256):
     lookUpTable[0,i] = np.clip(pow(i / 255.0, 0.6) * 255.0, 0, 255)
@@ -58,6 +59,7 @@ def getimages(path):
     images = os.listdir(path)
     images = [i for i in images if "DS" not in images]
     pairs = [(a, b) for idx, a in enumerate(images) for b in images[idx + 1:]]
+    pairs = random.sample(pairs, 1)
     return pairs
 overall_threshold = []
 for i in training:
@@ -73,12 +75,14 @@ for i in training:
 ## Becasue all taining images are from the same images, so we can set min threshold as overall_threshold.
 th = min([i for j in overall_threshold for i in j])
 print(th)
+
 ## check the accuracy for testing data.
 def gettest(path):
     path = "./test/" + path
     images = os.listdir(path)
     images = [i for i in images if "DS" not in images]
     pairs = [(a, b) for idx, a in enumerate(images) for b in images[idx + 1:]]
+    pairs = random.sample(pairs, 1)
     return pairs
 testing = os.listdir("./test")
 testing = [i for i in testing if "DS" not in i]
@@ -98,7 +102,7 @@ for i in testing:
 accuracy = yes/(yes+no)
 print(accuracy)
 overall_threshold2 = [sum(i)/len(i) for i in overall_threshold]
-textfile = open("result.txt", "w")
+textfile = open("result500214143.txt", "w")
 for i in overall_threshold2:
     textfile.write(str(i) + "\n")
 textfile.write("threshold" + "\n")

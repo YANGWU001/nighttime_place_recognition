@@ -4,6 +4,9 @@ import os
 from matplotlib import pyplot as plt
 from alive_progress import alive_bar
 import time
+import random
+import itertools
+import pandas as pd
 lookUpTable = np.empty((1,256), np.uint8)
 for i in range(256):
     lookUpTable[0,i] = np.clip(pow(i / 255.0, 0.6) * 255.0, 0, 255)
@@ -51,58 +54,70 @@ def thre(image1, image2):
         if m.distance < 0.75*n.distance:
             good.append([m])
     return(len(good))
-training = os.listdir("./train")
-training = [i for i in training if "DS" not in i]
-def getimages(path):
-    path = "./train/" + path
-    images = os.listdir(path)
-    images = [i for i in images if "DS" not in images]
-    pairs = [(a, b) for idx, a in enumerate(images) for b in images[idx + 1:]]
-    return pairs
-overall_threshold = []
-for i in training:
-    threshold = []
-    pairs = getimages(i)
-    path = "./train/"+i+"/"
-    with alive_bar(len(pairs)) as bar:
-        for j in pairs:
-            threshold.append(thre(path+j[0], path+j[1]))
-            time.sleep(0.001)
-            bar()
-    overall_threshold.append(threshold)
+#overall_threshold = []
+#for i in training:
+    #threshold = []
+    #pairs = getimages(i)
+    #path = "./train/"+i+"/"
+    #with alive_bar(len(pairs)) as bar:
+        #for j in pairs:
+            #threshold.append(thre(path+j[0], path+j[1]))
+            #time.sleep(0.001)
+            #bar()
+    #overall_threshold.append(threshold)
 ## Becasue all taining images are from the same images, so we can set min threshold as overall_threshold.
-th = min([i for j in overall_threshold for i in j])
-print(th)
+#th = min([i for j in overall_threshold for i in j])
+#print(th)
 ## check the accuracy for testing data.
 def gettest(path):
     path = "./test/" + path
     images = os.listdir(path)
-    images = [i for i in images if "DS" not in images]
+    images = [path+"/"+i for i in images if "DS" not in images]
     pairs = [(a, b) for idx, a in enumerate(images) for b in images[idx + 1:]]
+    random.seed(10)
+    pairs = random.sample(pairs, 250)
     return pairs
 testing = os.listdir("./test")
 testing = [i for i in testing if "DS" not in i]
-yes = 0
-no = 0
+g1 = []
 for i in testing:
-    path = "./test/"+i+"/"
-    test_pairs = gettest(i)
-    with alive_bar(len(test_pairs)) as bar:
-        for j in test_pairs:
-            if thre(path+j[0],path+j[1])>=th:
-                yes +=1
-            else:
-                no +=1
-            time.sleep(0.001)
-            bar()
-accuracy = yes/(yes+no)
-print(accuracy)
-overall_threshold2 = [sum(i)/len(i) for i in overall_threshold]
-textfile = open("result.txt", "w")
-for i in overall_threshold2:
-    textfile.write(str(i) + "\n")
-textfile.write("threshold" + "\n")
-textfile.write(str(th) + "\n")
-textfile.write("accuracy" + "\n")
-textfile.write(str(accuracy) + "\n")
-textfile.close()
+    aa = gettest(i)
+    g1 += aa
+def unpair(path):
+    a = os.listdir(path)
+    a = [i for i in a if "DS" not in i]
+    b1 = os.listdir(path+"/" +a[0])
+    b1 = [path+"/"+a[0]+"/"+i for i in b1 if "DS" not in i]
+    b2 = os.listdir(path + "/" + a[1])
+    b2 = [path+"/"+a[1]+"/"+i for i in b2 if "DS" not in i]
+    random.seed(40)
+    unpaired = random.sample(set(itertools.product(b1,b2)),500)
+    return unpaired
+g0 = unpair("./test")
+ths = [57,60,59,112,113,84,85,86,103,101,105]
+result = pd.DataFrame(index = range(len(ths)), columns = ["threshold", "accuracy","recall", "precision", "F1"])
+
+result["threshold"] = ths
+g1_result =[]
+with alive_bar(500) as bar:
+    for i in g1:
+        g1_result.append(thre(i[0],i[1]))
+        time.sleep(0.001)
+        bar()
+g0_result = []
+with alive_bar(500) as bar:
+    for i in g0:
+        g0_result.append(thre(i[0],i[1]))
+        time.sleep(0.001)
+        bar() 
+for t in range(len(ths)):
+    tp = len([i for i in g1_result if i >=ths[t]])
+    fp = len([i for i in g0_result if i >=ths[t]])
+    fn = len([i for i in g1_result if i <ths[t]])
+    tn = len([i for i in g0_result if i <ths[t]])
+    accuracy = (tp+tn)/1000
+    precision = tp/(tp+fp)
+    recall = tp/(tp+fn)
+    f1 = 2*precision*recall/(precision+recall)
+    result.iloc[t,1:] = [accuracy,recall,precision,f1]
+result.to_csv("threshold_result.csv", index = False)
